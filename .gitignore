@@ -1,0 +1,26 @@
+# file types 
+*.jpeg
+*.jpg
+*.png
+*.tiff
+*.pyc
+*.pdf
+*~
+*.swp
+*.tar.gz
+
+# files 
+trash
+.gitignore
+
+
+# directories 
+archive/
+backup/
+build/
+xcode/
+trash/
+
+
+# don't ignore
+build/.gitignore

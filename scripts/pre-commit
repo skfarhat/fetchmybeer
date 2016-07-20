@@ -5,7 +5,7 @@
 # This doesn't work for the first commit which atm must be done with git commit -n 
 # Fix this later 
 #
-`#
+#
 
 
 ROOT=$(git rev-parse --show-toplevel)
@@ -14,10 +14,9 @@ git stash -q --keep-index
 
 # ----------------------------------------------------
 # Test
-CXXDIR="$ROOT/src/c++/"
-echo $CXXDIR
-mkdir -p $CXXDIR/build
-cd $CXXDIR/build
+
+mkdir -p $ROOT/build
+cd $ROOT/build
 
 echo "Running CMake" 
 cmake ..
