@@ -1,0 +1,39 @@
+#/bin/bash 
+# pre-commit.sh
+
+# TODO: 
+# This doesn't work for the first commit which atm must be done with git commit -n 
+# Fix this later 
+#
+`#
+
+
+ROOT=$(git rev-parse --show-toplevel)
+
+git stash -q --keep-index
+
+# ----------------------------------------------------
+# Test
+CXXDIR="$ROOT/src/c++/"
+echo $CXXDIR
+mkdir -p $CXXDIR/build
+cd $CXXDIR/build
+
+echo "Running CMake" 
+cmake ..
+if [ $? -ne 0 ]; then 
+    echo "Commit aborted because CMake failed"
+    exit 1
+fi
+
+echo "Running Make"
+make -j 8
+if [ $? -ne 0 ]; then 
+    echo "Commit aborted because Make failed" 
+    exit 1
+fi
+echo "Done with Make"
+
+# ----------------------------------------------------
+cd $ROOT
+git stash pop -q
