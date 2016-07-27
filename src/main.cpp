@@ -36,38 +36,131 @@ Scalar whiteColor(255,255,255);
 
 map<string, Trackbar*> controls;
 std::map<enum FMB_Colors, vector<FMB_ColorRange*>> colorRanges;
+int colorRangesCount = -1;
 
 const char* WINDOW_CONTROLS =  "display";
-
+const char* COLOR_CONTROLS =  "colorControls";
 
 void trackbarChanged(int value, void * data) {
 
-  char * cc = (char* ) data;
-  printf("cc is %s", cc);
-  const char *sss = const_cast<const char*>(static_cast<char*>(data));
-  printf("sss is %s", sss);
-}
+  const char *cData = const_cast<const char*>(static_cast<char*>(data));
+  string sData = string(cData);
 
+  // if colorThreshold is the control moved
+  // adjust the other trackbars
+  if (sData.compare(CTRL_COLOR_THRESH)) {
+
+    auto pair = colorRanges.find((enum FMB_Colors) value);
+    vector<FMB_ColorRange*> ranges =  pair->second;
+    for (auto range : ranges) {
+
+      // TODO: consider changing the window name to indicate which color is changed
+
+      // TODO(sami):
+      // modify the needed trackbars
+
+    }
+  }
+}
 
 void initColorRanges() {
 
-  // Do Red
+  // Red
   std::vector<FMB_ColorRange*> redRanges;
   redRanges.push_back(new FMB_ColorRange(cv::Scalar(0,100,100), cv::Scalar(10,255,255)));
   redRanges.push_back(new FMB_ColorRange(cv::Scalar(170,0,0), cv::Scalar(180,255,255)));
   colorRanges.insert(std::make_pair(RED, redRanges));
 
-  // Do Blue
+  // Blue
   std::vector<FMB_ColorRange*> blueRanges;
   blueRanges.push_back(new FMB_ColorRange(cv::Scalar(100,32,32), cv::Scalar(127,255,255)));
   colorRanges.insert(std::make_pair(BLUE, blueRanges));
 
-  // Do Green
+  // Green
   std::vector<FMB_ColorRange*> greenRanges;
   greenRanges.push_back(new FMB_ColorRange(cv::Scalar(40,128, 64), cv::Scalar(90,255,255)));
   colorRanges.insert(std::make_pair(GREEN, greenRanges));
 
 }
+
+void createTrackbars() {
+
+  controls[CTRL_C] = new Trackbar(1,255, 3);
+  controls[CTRL_BLOCKSIZE]= new Trackbar(1,255,7);
+  controls[CTRL_MIN_AREA]= new Trackbar(1,10000,1000);
+  controls[CTRL_COLOR_THRESH] = new Trackbar(0, 3, 0); // 0 = None, 1 = Red, 2 = Blue, 3 = Green
+
+  // DEV NOTE: this is intentionally done with a predefined array of keys
+  // instead of doing the traditionl for (auto pair: controls) {}
+  // because this gives us valid references to strings which we can use when calling
+  // the callback function trackbarChanged.
+  // There may be alternative solutions, but for now this works.
+
+  int size = sizeof(ctrlKeys) / sizeof(ctrlKeys[0]);
+  for(int i = 0; i < size; i++) {
+    auto pair = controls.find(ctrlKeys[i]);
+    void *data = static_cast<void*>(const_cast<char*>(ctrlKeys[i].c_str()));
+    cvCreateTrackbar2(pair->first.c_str(),
+                      WINDOW_CONTROLS,
+                      &pair->second->value,
+                      pair->second->max,
+                      trackbarChanged, data);
+  }
+
+  // set colorRangesCount to the number of ranges for colors
+  // is in the colorRange (should be 2, but the design is flexible)
+  for (auto pair : colorRanges) {
+    int n = pair.second.size();
+    if (n  > colorRangesCount) colorRangesCount = n;
+  }
+
+  for (int i = 1; i <= colorRangesCount; i++) {
+    // H[i]_Low
+    // H[i]_High
+    string HSV[] = {"H", "S", "V"};
+    for (string letter : HSV) {
+      string iLow = letter + "LOW_" + std::to_string(i);
+      string iHigh = letter + "HIGH_" + std::to_string(i);
+
+      // acceptable vlues for HSV are
+      // H(0-180), S(0-255), V(0-255)
+      int max = (letter=="H")? 180 : 255;
+
+      Trackbar *trackLow =  new Trackbar(0, max, 0);
+      Trackbar *trackHigh = new Trackbar(0, max, 255);
+
+      controls[iLow] = trackLow;
+      controls[iHigh] = trackHigh;
+
+      cvCreateTrackbar(iLow.c_str(),
+                       COLOR_CONTROLS,
+                       &trackLow->value,
+                       trackLow->max);
+
+      cvCreateTrackbar(iHigh.c_str(),
+                       COLOR_CONTROLS,
+                       &trackHigh->value,
+                       trackHigh->max);
+    }
+  }
+
+
+}
+
+void init() {
+  // initialise map with RED, BLUE, GREEN HSV colors
+  initColorRanges();
+
+  // create windows to be used for display
+  namedWindow("display");
+  namedWindow("color");
+  namedWindow(COLOR_CONTROLS);
+
+  createTrackbars();
+
+}
+
+
 
 void thresholdPredefinedColor(enum FMB_Colors color) {
 
@@ -80,43 +173,36 @@ void thresholdPredefinedColor(enum FMB_Colors color) {
   }
 }
 
-void createTrackbars() {
 
-  controls[CTRL_HLOW] = new Trackbar(0,180,0);
-  controls[CTRL_HHIGH] = new Trackbar(0,180,255);
-  controls[CTRL_SLOW] = new Trackbar(0,255,0);
-  controls[CTRL_SHIGH] = new Trackbar(0,255,255);
-  controls[CTRL_VLOW] = new Trackbar(0,255,0);
-  controls[CTRL_VHIGH] = new Trackbar(0,255,255);
-  controls[CTRL_C] = new Trackbar(1,255, 3);
-  controls[CTRL_BLOCKSIZE]= new Trackbar(1,255,7);
-  controls[CTRL_MIN_AREA]= new Trackbar(1,10000,1000);
-  controls[CTRL_COLOR_THRESH] = new Trackbar(0, 3, 0); // 0 = None, 1 = Red, 2 = Blue, 3 = Green
+/** thresholds the image for color values between those specified
+ * DEV: uses colorRanges and colorRangesCount
+ */
+void colorThreshold(InputArray in, OutputArray out) {
 
-  for (auto pair : controls) {
+  for (int i = 1; i <= colorRangesCount; i++) {
+    Mat inHSV;
+    cvtColor(in, inHSV, CV_BGR2HSV);
+    cv::Scalar lowScalar, highScalar;
 
-    cvCreateTrackbar2(pair.first.c_str(),
-                      WINDOW_CONTROLS,
-                      &pair.second->value,
-                      pair.second->max,
-                      &trackbarChanged, NULL);
+    // get high & low HSV from controls
+    int lowH = controls["HLOW_" + std::to_string(i)]->value;
+    int highH = controls["HHIGH_" + std::to_string(i)]->value;
+    int lowS = controls[ "SLOW_" + std::to_string(i)]->value;
+    int highS = controls["SHIGH_" + std::to_string(i)]->value;
+    int lowV = controls[ "VLOW_" + std::to_string(i)]->value;
+    int highV = controls["VHIGH_" + std::to_string(i)]->value;
+
+    cv::Scalar low(lowH, lowS, lowV);
+    cv::Scalar high(highH, highS, highV);
+
+    // inRange converts to a 1 channel thing, so we use cvtColor
+    // to get it to 3 channels again
+    inRange(inHSV, low, high, inHSV);
+    cvtColor(inHSV, inHSV, CV_GRAY2BGR);
+    bitwise_and(in, inHSV, inHSV);
+
+    bitwise_or(inHSV, out, out);
   }
-}
-
-
-void colorThreshold(InputArray in, OutputArray out,
-                    cv::Scalar low, cv::Scalar high) {
-
-  Mat temp;
-  cvtColor(in, temp, CV_BGR2HSV);
-
-  // inRange converts to a 1 channel thing, so we use cvtColor
-  // to get it to 3 channels again
-  inRange(temp, low, high, temp);
-  cvtColor(temp, temp,CV_GRAY2BGR);
-
-  bitwise_and(temp, in, out);
-
 }
 
 void getContours(InputArray in, OutputArray out,
@@ -180,28 +266,9 @@ void getBoxesAndRects(vector<vector<Point>> contours,
 
 }
 
-cv::Scalar getLowScalar() {
-  return cv::Scalar(controls[CTRL_HLOW]->value,
-                    controls[CTRL_SLOW]->value,
-                    controls[CTRL_VLOW]->value);
-}
-
-cv::Scalar getHighScalar() {
-  return cv::Scalar(controls[CTRL_HHIGH]->value,
-                    controls[CTRL_SHIGH]->value,
-                    controls[CTRL_VHIGH]->value);
-}
-
 int main() {
 
-  // initialise map with RED, BLUE, GREEN HSV colors
-  initColorRanges();
-
-  // create windows to be used for display
-  namedWindow("display");
-  namedWindow("color");
-
-  createTrackbars();
+  init();
 
   VideoCapture vc(0);
 
@@ -223,14 +290,14 @@ int main() {
     C               = (C%2)? C : C+1;
     int ctrlMinArea = controls[CTRL_MIN_AREA]->value;
 
-    cv::Scalar low = getLowScalar();
-    cv::Scalar high = getHighScalar();
-
     // color threshold
-    // colorthreshold_output is BGR
-    Mat colorthreshold_output;
-    colorThreshold(temp, colorthreshold_output ,low, high);
-
+    // colorthreshold_output is BGRb
+    Mat colorthreshold_output = Mat::ones(temp.size(), CV_8UC3);
+    colorThreshold(temp, colorthreshold_output);
+    imshow("color", colorthreshold_output);
+    waitKey(100);
+    continue;
+    // =========================================================================
 
     // from BGR to gray
     /// Convert image to gray and blur it
@@ -302,10 +369,10 @@ int main() {
         rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
       }
     }
-
+    
     imshow("display", drawing);
-//    imshow("color", colorthreshold_output);
-
+    //    imshow("color", colorthreshold_output);
+    
     waitKey(100);
   }
   

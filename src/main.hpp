@@ -9,7 +9,7 @@
 #ifndef test_color_hpp
 #define test_color_hpp
 
-
+//
 #define CTRL_HLOW         "hlow"
 #define CTRL_HHIGH        "hhigh"
 #define CTRL_VLOW         "vlow"
@@ -22,6 +22,14 @@
 #define CTRL_COLOR_THRESH "ColorThresh" // which color do we want to threshold against
 
 #include <opencv2/opencv.hpp>
+
+
+std::string ctrlKeys[] = {
+  CTRL_C,
+  CTRL_BLOCKSIZE,
+  CTRL_MIN_AREA,
+  CTRL_COLOR_THRESH
+};
 
 class Trackbar {
 
