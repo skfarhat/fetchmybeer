@@ -1,4 +1,4 @@
-#/bin/bash 
+#!/bin/bash 
 # pre-commit.sh
 
 # TODO: 
@@ -7,7 +7,11 @@
 #
 #
 
-
+function safe_exit { 
+    git stash pop -q
+    exit $1 
+}
+exec < /dev/tty
 ROOT=$(git rev-parse --show-toplevel)
 
 git stash -q --keep-index
@@ -22,17 +26,30 @@ echo "Running CMake"
 cmake ..
 if [ $? -ne 0 ]; then 
     echo "Commit aborted because CMake failed"
-    exit 1
+    safe_exit 1
 fi
 
 echo "Running Make"
 make -j 8
 if [ $? -ne 0 ]; then 
     echo "Commit aborted because Make failed" 
-    exit 1
+    safe_exit 1
 fi
 echo "Done with Make"
+ 
+
+# do some linting 
+cd $ROOT
+FILES=$(git diff --cached --name-only) 
+
+for file in $FILES; do 
+    scripts/lint.sh $file
+    if [ $? -ne 0 ]; then 
+        safe_exit 1
+    fi 
+done 
 
 # ----------------------------------------------------
+
 cd $ROOT
-git stash pop -q
+safe_exit 0
