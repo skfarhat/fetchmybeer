@@ -51,9 +51,10 @@ public:
 
 
 enum FMB_Colors {
-  RED = 0,
+  NONE = 0, 
   BLUE = 1,
-  GREEN = 2
+  GREEN = 2,
+  RED = 3
 } FMB_Colors;
 
 /** HSV color range */
@@ -67,6 +68,9 @@ public:
     highColor = _highColor;
   }
 
+  cv::Scalar getLowColor() { return lowColor; }
+  cv::Scalar getHighColor() { return highColor; }
+  
 private:
   cv::Scalar lowColor;
   cv::Scalar highColor;

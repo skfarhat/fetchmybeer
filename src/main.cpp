@@ -28,6 +28,9 @@ using std::multimap;
 
 // * show color thresholding in sepearate frame
 // * threshold image based on some preset colors: red, blue, green
+// BUG:
+
+// * when we switch to blue, green, we need to default the (ranges 2 onwards.. )
 
 // =============================================================================
 
@@ -38,9 +41,14 @@ map<string, Trackbar*> controls;
 std::map<enum FMB_Colors, vector<FMB_ColorRange*>> colorRanges;
 int colorRangesCount = -1;
 
-const char* WINDOW_CONTROLS =  "display";
-const char* COLOR_CONTROLS =  "colorControls";
+const char* DISPLAY         =  "display";
+const char* COLOR_CONTROLS  =  "colorControls";
+const char* WINDOW_CONTROLS =  "controls";
 
+void changeTrackbarPos(string trackbarName, string winName, int value) {
+  setTrackbarPos(trackbarName, winName,  value);
+  controls[trackbarName]->value = value;
+}
 void trackbarChanged(int value, void * data) {
 
   const char *cData = const_cast<const char*>(static_cast<char*>(data));
@@ -48,11 +56,22 @@ void trackbarChanged(int value, void * data) {
 
   // if colorThreshold is the control moved
   // adjust the other trackbars
-  if (sData.compare(CTRL_COLOR_THRESH)) {
-
+  if (sData.compare(CTRL_COLOR_THRESH)==0) {
     auto pair = colorRanges.find((enum FMB_Colors) value);
     vector<FMB_ColorRange*> ranges =  pair->second;
-    for (auto range : ranges) {
+    cout << "ranges: " << ranges.size() << endl;
+    for (int i = 0; i < ranges.size(); i++) {
+      FMB_ColorRange *range = ranges[i];
+      cv::Scalar lowColor = range->getLowColor();
+      cv::Scalar highColor = range->getHighColor();
+
+      changeTrackbarPos("HLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[0]);
+      changeTrackbarPos("HHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[0]);
+      changeTrackbarPos("SLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[1]);
+      changeTrackbarPos("SHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[1]);
+      changeTrackbarPos("VLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[2]);
+      changeTrackbarPos("VHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[2]);
+
 
       // TODO: consider changing the window name to indicate which color is changed
 
@@ -105,6 +124,7 @@ void createTrackbars() {
                       &pair->second->value,
                       pair->second->max,
                       trackbarChanged, data);
+
   }
 
   // set colorRangesCount to the number of ranges for colors
@@ -122,13 +142,19 @@ void createTrackbars() {
       string iLow = letter + "LOW_" + std::to_string(i);
       string iHigh = letter + "HIGH_" + std::to_string(i);
 
+      cout << "keys: " << iLow << " " << iHigh << endl;
       // acceptable vlues for HSV are
       // H(0-180), S(0-255), V(0-255)
-      int max = (letter=="H")? 180 : 255;
+      int max = (letter.compare("H")==0)? 180 : 255;
+      // for first color range, set the default of low to 0
+      // for the rest set default to 255, this is like saying they are disabled
+      // unless the user explicitly changes them
+      // (same analogy goes for high, but 0 <--> 255 )
+      int defaultLow = (i==1)? 0 : 255;
+      int defaultHigh = (i==1)? 255: 0;
 
-      Trackbar *trackLow =  new Trackbar(0, max, 0);
-      Trackbar *trackHigh = new Trackbar(0, max, 255);
-
+      Trackbar *trackLow =  new Trackbar(0, max, defaultLow);
+      Trackbar *trackHigh = new Trackbar(0, max, defaultHigh);
       controls[iLow] = trackLow;
       controls[iHigh] = trackHigh;
 
@@ -152,12 +178,15 @@ void init() {
   initColorRanges();
 
   // create windows to be used for display
-  namedWindow("display");
-  namedWindow("color");
-  namedWindow(COLOR_CONTROLS);
+  namedWindow(DISPLAY, WINDOW_NORMAL);
+
+  namedWindow(WINDOW_CONTROLS, WINDOW_NORMAL);
+  resizeWindow(WINDOW_CONTROLS, 640, 320);
+
+  namedWindow(COLOR_CONTROLS, WINDOW_NORMAL);
+  resizeWindow(COLOR_CONTROLS, 640, 320);
 
   createTrackbars();
-
 }
 
 
@@ -173,15 +202,15 @@ void thresholdPredefinedColor(enum FMB_Colors color) {
   }
 }
 
-
-/** thresholds the image for color values between those specified
+/** 
+ * thresholds the image for color values between those specified
  * DEV: uses colorRanges and colorRangesCount
  */
 void colorThreshold(InputArray in, OutputArray out) {
-
+  Mat inHSV;
+  cvtColor(in, inHSV, CV_BGR2HSV);
   for (int i = 1; i <= colorRangesCount; i++) {
-    Mat inHSV;
-    cvtColor(in, inHSV, CV_BGR2HSV);
+
     cv::Scalar lowScalar, highScalar;
 
     // get high & low HSV from controls
@@ -197,11 +226,12 @@ void colorThreshold(InputArray in, OutputArray out) {
 
     // inRange converts to a 1 channel thing, so we use cvtColor
     // to get it to 3 channels again
-    inRange(inHSV, low, high, inHSV);
-    cvtColor(inHSV, inHSV, CV_GRAY2BGR);
-    bitwise_and(in, inHSV, inHSV);
+    Mat temp;
+    inRange(inHSV, low, high, temp);
+    cvtColor(temp, temp, CV_GRAY2BGR);
+    bitwise_and(in, temp, temp);
 
-    bitwise_or(inHSV, out, out);
+    bitwise_or(temp, out, out);
   }
 }
 
