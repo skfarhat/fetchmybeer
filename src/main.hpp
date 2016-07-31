@@ -27,6 +27,9 @@
 #include <string>
 #include "Trackbar.hpp"
 
+/** when set to non-zero this displays info on the console */ 
+#define CONSOLE_DEBUG 1
+
 using std::map;
 using std::vector;
 using std::string;

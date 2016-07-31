@@ -54,8 +54,7 @@ void trackbarChanged(int value, void * data) {
         controls["SHIGH_" + std::to_string(i+1)]->setValue(highColor.val[1]);
         controls["VLOW_" + std::to_string(i+1)]->setValue( lowColor.val[2]);
         controls["VHIGH_" + std::to_string(i+1)]->setValue(highColor.val[2]);
-      }
-      else {
+      } else {
         // for the rest of the color-control trackbars, default them
         controls["HLOW_" + std::to_string(i+1)]->setToDefault();
         controls["HHIGH_" + std::to_string(i+1)]->setToDefault();
@@ -69,7 +68,6 @@ void trackbarChanged(int value, void * data) {
 }
 
 void initColorRanges() {
-
   // Red
   std::vector<FMB_ColorRange*> redRanges;
   redRanges.push_back(new FMB_ColorRange(Scalar(0,100,100),
@@ -80,7 +78,7 @@ void initColorRanges() {
 
   // Blue
   std::vector<FMB_ColorRange*> blueRanges;
-  blueRanges.push_back(new FMB_ColorRange(Scalar(100,32,32),
+  blueRanges.push_back(new FMB_ColorRange(Scalar(100,102,32),
                                           Scalar(127,255,255)));
   colorRanges.insert(std::make_pair(BLUE, blueRanges));
 
@@ -89,16 +87,13 @@ void initColorRanges() {
   greenRanges.push_back(new FMB_ColorRange(Scalar(40,128, 64),
                                            Scalar(90,255,255)));
   colorRanges.insert(std::make_pair(GREEN, greenRanges));
-
 }
 
 void createTrackbars() {
-
   controls[CTRL_C] = new Trackbar(WINDOW_CONTROLS, CTRL_C,
                                   1, 255, 3,
                                   trackbarChanged,
                                   (void*)0);
-
   controls[CTRL_BLOCKSIZE]= new Trackbar(WINDOW_CONTROLS, CTRL_BLOCKSIZE,
                                          1, 255, 7,
                                          trackbarChanged,
@@ -107,7 +102,6 @@ void createTrackbars() {
                                         1, 10000, 1000,
                                         trackbarChanged,
                                         (void*)2);
-
   // 0 = None, 1 = Red, 2 = Blue, 3 = Green
   controls[CTRL_COLOR_THRESH] = new Trackbar(WINDOW_CONTROLS, CTRL_COLOR_THRESH,
                                              0, 3, 0,
@@ -120,7 +114,6 @@ void createTrackbars() {
     int n = pair.second.size();
     if (n  > colorRangesCount) colorRangesCount = n;
   }
-
   for (int i = 1; i <= colorRangesCount; i++) {
     // H[i]_Low
     // H[i]_High
@@ -152,6 +145,10 @@ void init() {
 
   // create windows to be used for display
   namedWindow(DISPLAY, WINDOW_NORMAL);
+
+  // debug window
+  namedWindow("debug", WINDOW_NORMAL);
+  resizeWindow("debug", 640, 320);
 
   namedWindow(WINDOW_CONTROLS, WINDOW_NORMAL);
   resizeWindow(WINDOW_CONTROLS, 640, 320);
@@ -196,7 +193,6 @@ void colorThreshold(InputArray in, OutputArray out) {
 }
 
 int main() {
-
   init();
 
   VideoCapture vc(0);
@@ -205,6 +201,9 @@ int main() {
     throw "Problem opening camera!";
 
   Mat out, frame, temp;
+  // count the number times the loop has looped
+  // used to display the occasional console debug info
+  int count = 0;
   while(true) {
     vc >> frame;
     resize(frame, temp, Size_<int>(frame.cols/2, frame.rows/2));
@@ -215,7 +214,12 @@ int main() {
     // get parameters from controls
     int blockSize   = controls[CTRL_BLOCKSIZE]->getValue();
     int C           = controls[CTRL_C]->getValue();
+
+    // insure blocksize is odd and of min value of 3
     blockSize       = (blockSize%2)?blockSize: blockSize+1;
+    blockSize       = (blockSize < 3)? 3 : blockSize;
+
+    // insure C is odd
     C               = (C%2)? C : C+1;
     int ctrlMinArea = controls[CTRL_MIN_AREA]->getValue();
 
@@ -224,9 +228,6 @@ int main() {
     Mat colorthreshold_output = Mat::ones(temp.size(), CV_8UC3);
     colorThreshold(temp, colorthreshold_output);
     imshow(DISPLAY, colorthreshold_output);
-    waitKey(100);
-    continue;
-    // =========================================================================
 
     // from BGR to gray
     /// Convert image to gray and blur it
@@ -242,6 +243,18 @@ int main() {
                       CV_THRESH_BINARY, blockSize, C);
 //    threshold( src_gray, threshold_output, thresh, max_thresh, THRESH_BINARY );
 
+    imshow("debug", threshold_output);
+#ifdef CONSOLE_DEBUG
+    if (count++ > 50) {
+      for (auto pair : controls) {
+        cout << pair.first << " --> " << pair.second->getValue() << endl;
+      }
+      count = 0;
+    }
+#endif
+    waitKey(100);
+    continue;
+    // =========================================================================
 
     // Find contours
     vector<vector<Point> > contours;
@@ -295,8 +308,7 @@ int main() {
                      vector<Vec4i>(), 0, Point() );
         circle(drawing, center[i], (int)radius[i], color, 2, 8, 0 );
       }
-    }
-    else {
+    } else {
       // DRAW RECTANGLES
       for( int i = 0; i< nShape; i++ ) {
         Scalar color = Scalar(rng.uniform(0, 255),
