@@ -80,6 +80,14 @@ Scalar whiteColor(255,255,255);
 
 map<string, Trackbar*> controls;
 std::map<enum FMB_Colors, vector<FMB_ColorRange*>> colorRanges;
+
+/**
+ * this variable facilitates accessing the right color-control keys from the 
+ * 'controls' map. It allows us to get the values for keys like HHIGH_1, HHIGH_2
+ * the 1 and 2.. are known through this variable
+ * The expected value fo 'colorRangesCount' is 2 because of the presence of RED
+ * which needs two ranges in the HSV spectrum.
+ */
 int colorRangesCount = -1;
 
 #endif /* test_color_hpp */

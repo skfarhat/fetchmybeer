@@ -13,7 +13,8 @@ using std::string;
 std::map<std::string, Trackbar*> Trackbar::trackbars;
 
 Trackbar::Trackbar(string _windowName, string _name,
-                   int _min, int _max, int _value) {
+                   int _min, int _max, int _value) :
+DEFAULT_VALUE(_value) {
   windowName = _windowName;
   name = _name;
   min = _min;
@@ -26,7 +27,8 @@ Trackbar::Trackbar(string _windowName, string _name,
 
 Trackbar::Trackbar(string _windowName, string _name,
                    int _min, int _max, int _value,
-                   CvTrackbarCallback2 on_change, void* userdata) {
+                   CvTrackbarCallback2 on_change, void* userdata) :
+DEFAULT_VALUE(_value) {
   windowName = _windowName;
   name = _name;
   min = _min;
@@ -39,4 +41,8 @@ Trackbar::Trackbar(string _windowName, string _name,
 void Trackbar::setValue(int _value) {
   value = _value;
   cv::setTrackbarPos(name, windowName,  value);
+}
+
+void Trackbar::setToDefault() {
+  value = DEFAULT_VALUE;
 }

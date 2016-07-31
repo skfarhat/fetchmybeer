@@ -28,12 +28,18 @@ class Trackbar {
 
   void setValue(int);
 
+  /** set the trackbar value to the initial default value */
+  void setToDefault();
+
  private:
   std::string windowName;
   std::string name;
   int min;
   int max;
   int value;
+
+  /** the trackbar's default value, set at creation */
+  const int DEFAULT_VALUE;
 
   static std::map<std::string, Trackbar*> trackbars;
 };
