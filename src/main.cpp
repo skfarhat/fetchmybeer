@@ -8,19 +8,13 @@
 
 #include "main.hpp"
 #include <iostream>
-#include <map>
-#include <string>
-#include <vector>
-#include <map>
+
 
 using namespace cv;
 using std::cout;
 using std::cerr;
 using std::cin;
 using std::endl;
-using std::string;
-using std::vector;
-using std::map;
 using std::multimap;
 
 // =============================================================================
@@ -30,33 +24,26 @@ using std::multimap;
 // * threshold image based on some preset colors: red, blue, green
 // BUG:
 
-// * when we switch to blue, green, we need to default the (ranges 2 onwards.. )
+// * when we switch to blue, green, we need to default the (ranges 2 onwards..)
 
 // =============================================================================
 
-RNG rng(12345);
-Scalar whiteColor(255,255,255);
-
-map<string, Trackbar*> controls;
-std::map<enum FMB_Colors, vector<FMB_ColorRange*>> colorRanges;
-int colorRangesCount = -1;
-
-const char* DISPLAY         =  "display";
-const char* COLOR_CONTROLS  =  "colorControls";
-const char* WINDOW_CONTROLS =  "controls";
-
-void changeTrackbarPos(string trackbarName, string winName, int value) {
-  setTrackbarPos(trackbarName, winName,  value);
-  controls[trackbarName]->value = value;
+void* stringToVoidP(string str) {
+  void *data = static_cast<void*>(const_cast<char*>(str.c_str()));
+  return data;
 }
+
+/** expects data to be an integer referring to an index in the array ctrlKeys*/
 void trackbarChanged(int value, void * data) {
 
-  const char *cData = const_cast<const char*>(static_cast<char*>(data));
-  string sData = string(cData);
-
+  long index = (long) data;
+  string key = ctrlKeys[index];
+//  const char *cData = const_cast<const char*>(static_cast<char*>(data));
+//  string sData = string(cData);
+//  cout << "sData: " << sData << endl;
   // if colorThreshold is the control moved
   // adjust the other trackbars
-  if (sData.compare(CTRL_COLOR_THRESH)==0) {
+  if (key.compare(CTRL_COLOR_THRESH)==0) {
     auto pair = colorRanges.find((enum FMB_Colors) value);
     vector<FMB_ColorRange*> ranges =  pair->second;
     cout << "ranges: " << ranges.size() << endl;
@@ -65,19 +52,14 @@ void trackbarChanged(int value, void * data) {
       cv::Scalar lowColor = range->getLowColor();
       cv::Scalar highColor = range->getHighColor();
 
-      changeTrackbarPos("HLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[0]);
-      changeTrackbarPos("HHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[0]);
-      changeTrackbarPos("SLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[1]);
-      changeTrackbarPos("SHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[1]);
-      changeTrackbarPos("VLOW_" + std::to_string(i+1), COLOR_CONTROLS,  lowColor.val[2]);
-      changeTrackbarPos("VHIGH_" + std::to_string(i+1), COLOR_CONTROLS, highColor.val[2]);
-
+      controls["HLOW_" + std::to_string(i+1)]->setValue( lowColor.val[0]);
+      controls["HHIGH_" + std::to_string(i+1)]->setValue(highColor.val[0]);
+      controls["SLOW_" + std::to_string(i+1)]->setValue( lowColor.val[1]);
+      controls["SHIGH_" + std::to_string(i+1)]->setValue(highColor.val[1]);
+      controls["VLOW_" + std::to_string(i+1)]->setValue( lowColor.val[2]);
+      controls["VHIGH_" + std::to_string(i+1)]->setValue(highColor.val[2]);
 
       // TODO: consider changing the window name to indicate which color is changed
-
-      // TODO(sami):
-      // modify the needed trackbars
-
     }
   }
 }
@@ -86,46 +68,43 @@ void initColorRanges() {
 
   // Red
   std::vector<FMB_ColorRange*> redRanges;
-  redRanges.push_back(new FMB_ColorRange(cv::Scalar(0,100,100), cv::Scalar(10,255,255)));
-  redRanges.push_back(new FMB_ColorRange(cv::Scalar(170,0,0), cv::Scalar(180,255,255)));
+  redRanges.push_back(new FMB_ColorRange(Scalar(0,100,100), Scalar(10,255,255)));
+  redRanges.push_back(new FMB_ColorRange(Scalar(170,0,0), Scalar(180,255,255)));
   colorRanges.insert(std::make_pair(RED, redRanges));
 
   // Blue
   std::vector<FMB_ColorRange*> blueRanges;
-  blueRanges.push_back(new FMB_ColorRange(cv::Scalar(100,32,32), cv::Scalar(127,255,255)));
+  blueRanges.push_back(new FMB_ColorRange(Scalar(100,32,32), Scalar(127,255,255)));
   colorRanges.insert(std::make_pair(BLUE, blueRanges));
 
   // Green
   std::vector<FMB_ColorRange*> greenRanges;
-  greenRanges.push_back(new FMB_ColorRange(cv::Scalar(40,128, 64), cv::Scalar(90,255,255)));
+  greenRanges.push_back(new FMB_ColorRange(Scalar(40,128, 64), Scalar(90,255,255)));
   colorRanges.insert(std::make_pair(GREEN, greenRanges));
 
 }
 
 void createTrackbars() {
 
-  controls[CTRL_C] = new Trackbar(1,255, 3);
-  controls[CTRL_BLOCKSIZE]= new Trackbar(1,255,7);
-  controls[CTRL_MIN_AREA]= new Trackbar(1,10000,1000);
-  controls[CTRL_COLOR_THRESH] = new Trackbar(0, 3, 0); // 0 = None, 1 = Red, 2 = Blue, 3 = Green
+  controls[CTRL_C] = new Trackbar(WINDOW_CONTROLS, CTRL_C,
+                                  1, 255, 3,
+                                  trackbarChanged,
+                                  (void*)0);
 
-  // DEV NOTE: this is intentionally done with a predefined array of keys
-  // instead of doing the traditionl for (auto pair: controls) {}
-  // because this gives us valid references to strings which we can use when calling
-  // the callback function trackbarChanged.
-  // There may be alternative solutions, but for now this works.
+  controls[CTRL_BLOCKSIZE]= new Trackbar(WINDOW_CONTROLS, CTRL_BLOCKSIZE,
+                                         1, 255, 7,
+                                         trackbarChanged,
+                                         (void*)1);
+  controls[CTRL_MIN_AREA]= new Trackbar(WINDOW_CONTROLS, CTRL_MIN_AREA,
+                                        1, 10000, 1000,
+                                        trackbarChanged,
+                                        (void*)2);
 
-  int size = sizeof(ctrlKeys) / sizeof(ctrlKeys[0]);
-  for(int i = 0; i < size; i++) {
-    auto pair = controls.find(ctrlKeys[i]);
-    void *data = static_cast<void*>(const_cast<char*>(ctrlKeys[i].c_str()));
-    cvCreateTrackbar2(pair->first.c_str(),
-                      WINDOW_CONTROLS,
-                      &pair->second->value,
-                      pair->second->max,
-                      trackbarChanged, data);
-
-  }
+  // 0 = None, 1 = Red, 2 = Blue, 3 = Green
+  controls[CTRL_COLOR_THRESH] = new Trackbar(WINDOW_CONTROLS, CTRL_COLOR_THRESH,
+                                             0, 3, 0,
+                                             trackbarChanged,
+                                             (void*)3);
 
   // set colorRangesCount to the number of ranges for colors
   // is in the colorRange (should be 2, but the design is flexible)
@@ -142,7 +121,6 @@ void createTrackbars() {
       string iLow = letter + "LOW_" + std::to_string(i);
       string iHigh = letter + "HIGH_" + std::to_string(i);
 
-      cout << "keys: " << iLow << " " << iHigh << endl;
       // acceptable vlues for HSV are
       // H(0-180), S(0-255), V(0-255)
       int max = (letter.compare("H")==0)? 180 : 255;
@@ -153,24 +131,11 @@ void createTrackbars() {
       int defaultLow = (i==1)? 0 : 255;
       int defaultHigh = (i==1)? 255: 0;
 
-      Trackbar *trackLow =  new Trackbar(0, max, defaultLow);
-      Trackbar *trackHigh = new Trackbar(0, max, defaultHigh);
-      controls[iLow] = trackLow;
-      controls[iHigh] = trackHigh;
-
-      cvCreateTrackbar(iLow.c_str(),
-                       COLOR_CONTROLS,
-                       &trackLow->value,
-                       trackLow->max);
-
-      cvCreateTrackbar(iHigh.c_str(),
-                       COLOR_CONTROLS,
-                       &trackHigh->value,
-                       trackHigh->max);
+      // insert trackbars
+      controls[iLow] = new Trackbar(COLOR_CONTROLS, iLow, 0, max, defaultLow);
+      controls[iHigh] = new Trackbar(COLOR_CONTROLS, iHigh, 0, max, defaultHigh);
     }
   }
-
-
 }
 
 void init() {
@@ -189,20 +154,7 @@ void init() {
   createTrackbars();
 }
 
-
-
-void thresholdPredefinedColor(enum FMB_Colors color) {
-
-  if (color == RED) {
-
-  } else if (color == BLUE) {
-
-  } else if (color == GREEN){
-
-  }
-}
-
-/** 
+/**
  * thresholds the image for color values between those specified
  * DEV: uses colorRanges and colorRangesCount
  */
@@ -214,12 +166,12 @@ void colorThreshold(InputArray in, OutputArray out) {
     cv::Scalar lowScalar, highScalar;
 
     // get high & low HSV from controls
-    int lowH = controls["HLOW_" + std::to_string(i)]->value;
-    int highH = controls["HHIGH_" + std::to_string(i)]->value;
-    int lowS = controls[ "SLOW_" + std::to_string(i)]->value;
-    int highS = controls["SHIGH_" + std::to_string(i)]->value;
-    int lowV = controls[ "VLOW_" + std::to_string(i)]->value;
-    int highV = controls["VHIGH_" + std::to_string(i)]->value;
+    int lowH = controls["HLOW_" + std::to_string(i)]->getValue();
+    int highH = controls["HHIGH_" + std::to_string(i)]->getValue();
+    int lowS = controls[ "SLOW_" + std::to_string(i)]->getValue();
+    int highS = controls["SHIGH_" + std::to_string(i)]->getValue();
+    int lowV = controls[ "VLOW_" + std::to_string(i)]->getValue();
+    int highV = controls["VHIGH_" + std::to_string(i)]->getValue();
 
     cv::Scalar low(lowH, lowS, lowV);
     cv::Scalar high(highH, highS, highV);
@@ -276,7 +228,6 @@ void getContours(InputArray in, OutputArray out,
 void getBoxesAndRects(vector<vector<Point>> contours,
                       vector<RotatedRect> &rects,
                       vector<vector<Point2f>> &boxes) {
-
   const int MIN_AREA = 10;
 
   for (auto contour : contours) {
@@ -293,7 +244,6 @@ void getBoxesAndRects(vector<vector<Point>> contours,
       rects.push_back(rect);
     }
   }
-
 }
 
 int main() {
@@ -314,17 +264,17 @@ int main() {
     temp.copyTo(drawing);
 
     // get parameters from controls
-    int blockSize   = controls[CTRL_BLOCKSIZE]->value;
-    int C           = controls[CTRL_C]->value;
+    int blockSize   = controls[CTRL_BLOCKSIZE]->getValue();
+    int C           = controls[CTRL_C]->getValue();
     blockSize       = (blockSize%2)?blockSize: blockSize+1;
     C               = (C%2)? C : C+1;
-    int ctrlMinArea = controls[CTRL_MIN_AREA]->value;
+    int ctrlMinArea = controls[CTRL_MIN_AREA]->getValue();
 
     // color threshold
     // colorthreshold_output is BGRb
     Mat colorthreshold_output = Mat::ones(temp.size(), CV_8UC3);
     colorThreshold(temp, colorthreshold_output);
-    imshow("color", colorthreshold_output);
+    imshow(DISPLAY, colorthreshold_output);
     waitKey(100);
     continue;
     // =========================================================================

@@ -22,7 +22,15 @@
 #define CTRL_COLOR_THRESH "ColorThresh" // which color do we want to threshold against
 
 #include <opencv2/opencv.hpp>
+#include <map>
+#include <vector>
+#include <string>
+#include "Trackbar.hpp"
 
+using std::map;
+using std::vector;
+using std::string;
+using cv::Scalar;
 
 std::string ctrlKeys[] = {
   CTRL_C,
@@ -31,24 +39,13 @@ std::string ctrlKeys[] = {
   CTRL_COLOR_THRESH
 };
 
-class Trackbar {
-
-public:
-  int min;
-  int max;
-  int value;
-  Trackbar(int _min, int _max, int _value)
-  {
-    min = _min;
-    max = _max;
-    value = _value;
-  }
-};
-
-
 // Color Stuff
 // -----------
 
+
+const char* DISPLAY         =  "display";
+const char* COLOR_CONTROLS  =  "colorControls";
+const char* WINDOW_CONTROLS =  "controls";
 
 enum FMB_Colors {
   NONE = 0, 
@@ -76,5 +73,13 @@ private:
   cv::Scalar highColor;
 
 };
+
+
+cv::RNG rng(12345);
+Scalar whiteColor(255,255,255);
+
+map<string, Trackbar*> controls;
+std::map<enum FMB_Colors, vector<FMB_ColorRange*>> colorRanges;
+int colorRangesCount = -1;
 
 #endif /* test_color_hpp */
