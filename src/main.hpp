@@ -15,8 +15,6 @@
 #include <string>
 #include "Trackbar.hpp"
 
-
-//
 #define CTRL_HLOW         "hlow"
 #define CTRL_HHIGH        "hhigh"
 #define CTRL_VLOW         "vlow"
@@ -43,12 +41,12 @@ std::string ctrlKeys[] = {
   CTRL_COLOR_THRESH
 };
 
-// Color Stuff
-// -----------
-
 const char* DISPLAY         =  "display";
 const char* COLOR_CONTROLS  =  "colorControls";
 const char* WINDOW_CONTROLS =  "controls";
+
+cv::RNG rng(12345);
+Scalar whiteColor(255,255,255);
 
 enum FMB_Colors {
   NONE = 0,
@@ -57,7 +55,9 @@ enum FMB_Colors {
   RED = 3
 } FMB_Colors;
 
-/** HSV color range */
+/** 
+ * @class HSV color range
+ */
 class FMB_ColorRange {
 public:
 
@@ -68,16 +68,18 @@ public:
     highColor = _highColor;
   }
 
-  cv::Scalar getLowColor() { return lowColor; }
-  cv::Scalar getHighColor() { return highColor; }
+  Scalar getLowColor() { return lowColor; }
+  Scalar getHighColor() { return highColor; }
 
 private:
-  cv::Scalar lowColor;
-  cv::Scalar highColor;
+  Scalar lowColor;
+  Scalar highColor;
   
 };
 
-
+/** 
+ * @class Main 
+ */
 class Main {
  public:
 
@@ -99,6 +101,11 @@ class Main {
   { return colorRanges; }
 
   map<string, Trackbar*> getControls() { return controls; }
+
+  // TODO(sami): return const_iterator instead of the whole vector
+  /** returns a vector of trackbars that control HSV ranges */
+  vector<Trackbar*> getHSVTrackbars();
+
  private:
 
   struct TrackbarData {
@@ -134,8 +141,5 @@ class Main {
   void initColorRanges();
 
 };
-
-cv::RNG rng(12345);
-Scalar whiteColor(255,255,255);
 
 #endif /* test_color_hpp */

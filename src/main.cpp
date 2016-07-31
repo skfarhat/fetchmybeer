@@ -19,14 +19,14 @@ using std::to_string;
 
 /* =============================================================================
 
-TODO(sami):
------------
+ TODO(sami):
+ -----------
  * consider changing the window name to indicate which color is changed
 
-BUGS:
-------
+ BUGS:
+ ------
 
-==============================================================================*/
+ ==============================================================================*/
 
 void Main::init() {
   // initialise map with RED, BLUE, GREEN HSV colors
@@ -89,6 +89,16 @@ void Main::start() {
   // used to display the occasional console debug info
   int count = 0;
   while(true) {
+#ifdef CONSOLE_DEBUG
+    if (count++ > 50) {
+      count = 0;
+      for (auto pair : controls) {
+        cout << pair.first << " --> " << pair.second->getValue() << endl;
+      }
+    }
+#endif
+
+    // get frame from camera and resize it
     vc >> frame;
     resize(frame, temp, Size_<int>(frame.cols/2, frame.rows/2));
 
@@ -128,14 +138,7 @@ void Main::start() {
     //    threshold( src_gray, threshold_output, thresh, max_thresh, THRESH_BINARY );
 
     imshow("debug", threshold_output);
-#ifdef CONSOLE_DEBUG
-    if (count++ > 50) {
-      for (auto pair : controls) {
-        cout << pair.first << " --> " << pair.second->getValue() << endl;
-      }
-      count = 0;
-    }
-#endif
+
     waitKey(100);
     continue;
     // =========================================================================
@@ -204,21 +207,28 @@ void Main::start() {
                   color, 2, 8, 0);
       }
     }
-    
-    imshow("display", drawing);
-    //    imshow("color", colorthreshold_output);
-    
+
+    imshow(DISPLAY, drawing);
+
     waitKey(100);
   }
 }
 
 void Main::deinit() {
-  
+
 }
 
-void* stringToVoidP(string str) {
-  void *data = static_cast<void*>(const_cast<char*>(str.c_str()));
-  return data;
+vector<Trackbar*> Main::getHSVTrackbars() {
+  vector<Trackbar*> trackbars;
+  for (int i = 1; i <= colorRangesCount; i++) {
+    trackbars.push_back(controls["HLOW_" + std::to_string(i)]);
+    trackbars.push_back(controls["HHIGH_" + std::to_string(i)]);
+    trackbars.push_back(controls["SLOW_" + std::to_string(i)]);
+    trackbars.push_back(controls["SHIGH_" + std::to_string(i)]);
+    trackbars.push_back(controls["VLOW_" + std::to_string(i)]);
+    trackbars.push_back(controls["VHIGH_" + std::to_string(i)]);
+  }
+  return trackbars;
 }
 
 /** expects data to be an integer referring to an index in the array ctrlKeys*/
@@ -239,17 +249,23 @@ void trackbarChanged(int value, void * data) {
   if (trackbar->getName().compare(CTRL_COLOR_THRESH)==0) {
     if (value == 0) {
       // TODO(sami): reset the color trackbars to their defaults
+
+      auto colorTrackbars = main->getHSVTrackbars();
+      for (Trackbar *t : colorTrackbars) {
+        t->setToDefault();
+      }
       return;
     }
-    auto pair = colorRanges.find((enum FMB_Colors) value);
 
+    auto pair = colorRanges.find((enum FMB_Colors) value);
     if (pair == colorRanges.end()) {
+      // we shouldn't be here, issues in initialising colorRanges ?
       throw "Could not find a colorRange for value " +
       std::to_string(value) + "\n";
     }
-    vector<FMB_ColorRange*> ranges =  pair->second;
-    for (int i = 0; i < colorRangesCount; i++) {
 
+    for (int i = 0; i < colorRangesCount; i++) {
+      vector<FMB_ColorRange*> ranges =  pair->second;
       if (i < ranges.size()) {
         FMB_ColorRange *range = ranges[i];
         cv::Scalar lowColor = range->getLowColor();
@@ -324,7 +340,7 @@ void Main::createTrackbars() {
       string iLow = letter + "LOW_" + std::to_string(i);
       string iHigh = letter + "HIGH_" + std::to_string(i);
 
-      // acceptable vlues for HSV are
+      // acceptable values for HSV are
       // H(0-180), S(0-255), V(0-255)
       int max = (letter.compare("H")==0)? 180 : 255;
       // for first color range, set the default of low to 0
@@ -343,12 +359,12 @@ void Main::createTrackbars() {
 
 int main() {
   Main *main = new Main();
+  
   main->init();
-
-//  init();
+  
   main->start();
-
+  
   main->deinit(); 
-
+  
   return 0;
 }
