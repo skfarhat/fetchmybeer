@@ -86,19 +86,20 @@ class Main {
   /** initialise */ 
   void init();
 
-  /** thresholds the image for colors in the ranges given in controls dict */
-  void colorThreshold(cv::InputArray in, cv::OutputArray out);
-
   /** start running (too vague I know) */
   void start();
 
-  /** de-initialise */ 
+  /** thresholds the image for colors in the ranges given in controls dict */
+  void colorThreshold(cv::InputArray in, cv::OutputArray out);
+
+  /** de-initialise */
   void deinit();
 
   int getColorRangesCount() { return colorRangesCount; }
 
-  std::map<enum FMB_Colors, vector<FMB_ColorRange*>> getColorRanges()
-  { return colorRanges; }
+  std::map<enum FMB_Colors, vector<FMB_ColorRange*>> getColorRanges() {
+    return colorRanges;
+  }
 
   map<string, Trackbar*> getControls() { return controls; }
 

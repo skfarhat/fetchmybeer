@@ -48,36 +48,6 @@ void Main::init() {
   createTrackbars();
 }
 
-/* DEV NOTE: uses controls and colorRangesCount */
-void Main::colorThreshold(InputArray in, OutputArray out) {
-  Mat inHSV;
-  cvtColor(in, inHSV, CV_BGR2HSV);
-  for (int i = 1; i <= colorRangesCount; i++) {
-
-    cv::Scalar lowScalar, highScalar;
-
-    // get high & low HSV from controls
-    int lowH = controls["HLOW_" + std::to_string(i)]->getValue();
-    int highH = controls["HHIGH_" + std::to_string(i)]->getValue();
-    int lowS = controls[ "SLOW_" + std::to_string(i)]->getValue();
-    int highS = controls["SHIGH_" + std::to_string(i)]->getValue();
-    int lowV = controls[ "VLOW_" + std::to_string(i)]->getValue();
-    int highV = controls["VHIGH_" + std::to_string(i)]->getValue();
-
-    cv::Scalar low(lowH, lowS, lowV);
-    cv::Scalar high(highH, highS, highV);
-
-    // inRange converts to a 1 channel thing, so we use cvtColor
-    // to get it to 3 channels again
-    Mat temp;
-    inRange(inHSV, low, high, temp);
-    cvtColor(temp, temp, CV_GRAY2BGR);
-    bitwise_and(in, temp, temp);
-
-    bitwise_or(temp, out, out);
-  }
-}
-
 void Main::start() {
   VideoCapture vc(0);
 
@@ -137,18 +107,24 @@ void Main::start() {
                       CV_THRESH_BINARY, blockSize, C);
     //    threshold( src_gray, threshold_output, thresh, max_thresh, THRESH_BINARY );
 
-    imshow("debug", threshold_output);
 
-    waitKey(100);
-    continue;
+
+    //    waitKey(100);
+    //    continue;
     // =========================================================================
 
-    // Find contours
+    // find contours
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
     findContours( threshold_output, contours, hierarchy,
                  CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
+
+    // draw contours
+    drawContours(temp, contours, -1, Scalar(rng.uniform(0, 255),
+                                            rng.uniform(0,255),
+                                            rng.uniform(0,255)));
+    imshow("debug", temp);
     /// Approximate contours to polygons + get bounding rects and circles
     vector<vector<Point> > contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
@@ -207,10 +183,40 @@ void Main::start() {
                   color, 2, 8, 0);
       }
     }
-
+    
     imshow(DISPLAY, drawing);
-
+    
     waitKey(100);
+  }
+}
+
+/* DEV NOTE: uses controls and colorRangesCount */
+void Main::colorThreshold(InputArray in, OutputArray out) {
+  Mat inHSV;
+  cvtColor(in, inHSV, CV_BGR2HSV);
+  for (int i = 1; i <= colorRangesCount; i++) {
+
+    cv::Scalar lowScalar, highScalar;
+
+    // get high & low HSV from controls
+    int lowH = controls["HLOW_" + std::to_string(i)]->getValue();
+    int highH = controls["HHIGH_" + std::to_string(i)]->getValue();
+    int lowS = controls[ "SLOW_" + std::to_string(i)]->getValue();
+    int highS = controls["SHIGH_" + std::to_string(i)]->getValue();
+    int lowV = controls[ "VLOW_" + std::to_string(i)]->getValue();
+    int highV = controls["VHIGH_" + std::to_string(i)]->getValue();
+
+    cv::Scalar low(lowH, lowS, lowV);
+    cv::Scalar high(highH, highS, highV);
+
+    // inRange converts to a 1 channel thing, so we use cvtColor
+    // to get it to 3 channels again
+    Mat temp;
+    inRange(inHSV, low, high, temp);
+    cvtColor(temp, temp, CV_GRAY2BGR);
+    bitwise_and(in, temp, temp);
+
+    bitwise_or(temp, out, out);
   }
 }
 

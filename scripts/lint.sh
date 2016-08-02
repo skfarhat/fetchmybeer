@@ -2,6 +2,9 @@
 # lint.sh 
 # This script is meant to sit alongside cpplint.py 
 
+# TODO(sami): this file should run in two modes: commit-mode for commit scripts 
+# and normal mode for when the user just wants to lint the file 
+
 exec < /dev/tty
 
 # color stuff 
@@ -89,12 +92,10 @@ fi
 
 # execute cpplint.py
 EXTENSIONS="--extensions=hpp,cpp,c,h"
-lint_out="$($CPPLINT $EXTENSIONS $FILTERS $@ 2>&1)"
+lint_out="$($CPPLINT $EXTENSIONS $FILTERS $@ 2>&1 >> $OUTPUT_FILE)"
 
-# TODO(sami): check what the python pass is in bash 
 if [ $? -eq 0 ]; then 
     # brilliant no issue 
-    echo ""
     exit 0 
 else
     # ask the use if they want to see the errors 
