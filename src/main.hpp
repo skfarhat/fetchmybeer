@@ -92,6 +92,9 @@ class Main {
   /** thresholds the image for colors in the ranges given in controls dict */
   void colorThreshold(cv::InputArray in, cv::OutputArray out);
 
+  void highlightContours(cv::InputOutputArray img,
+                         std::vector<std::vector<cv::Point>> contours);
+  
   /** de-initialise */
   void deinit();
 

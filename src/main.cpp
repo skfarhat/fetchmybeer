@@ -16,6 +16,7 @@ using std::cin;
 using std::endl;
 using std::multimap;
 using std::to_string;
+using cv::Point;
 
 /* =============================================================================
 
@@ -85,7 +86,6 @@ void Main::start() {
 
     // insure C is odd
     C               = (C%2)? C : C+1;
-    int ctrlMinArea = controls[CTRL_MIN_AREA]->getValue();
 
     // color threshold
     // colorthreshold_output is BGRb
@@ -124,69 +124,67 @@ void Main::start() {
     drawContours(temp, contours, -1, Scalar(rng.uniform(0, 255),
                                             rng.uniform(0,255),
                                             rng.uniform(0,255)));
+
+    highlightContours(drawing, contours); 
     imshow("debug", temp);
-    /// Approximate contours to polygons + get bounding rects and circles
-    vector<vector<Point> > contours_poly( contours.size() );
-    vector<Rect> boundRect( contours.size() );
-    vector<Point2f>center( contours.size() );
-    vector<float>radius( contours.size() );
 
-
-    // DRAWING
-    //
-    // number of shapes (rectangles or circles) to display
-    int nShape = 0;
-
-    // shape to draw: true --> circles, false --> rectangles
-    bool drawCircles = false;
-
-    // foreach contour, get the bounding rectangle and the area
-    // if the area is above some certain value
-    for( int i = 0; i < contours.size(); i++ ) {
-      approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-      Rect rect = boundingRect( Mat(contours_poly[i]) );
-      float area  = rect.area();
-
-      if (area > ctrlMinArea) {
-
-        // 1) Circles
-        minEnclosingCircle((Mat)contours_poly[i], center[nShape],
-                           radius[nShape]);
-
-        // 2) Rectangles
-        boundRect[nShape] = rect;
-
-        nShape++;
-      }
-    }
-
-    Mat dr = Mat::zeros(threshold_output.size(), CV_8UC3);
-    if (drawCircles) {
-      for( int i = 0; i< nShape; i++ ) {
-        Scalar color = Scalar(
-                              rng.uniform(0, 255),
-                              rng.uniform(0,255),
-                              rng.uniform(0,255) );
-        drawContours(dr, contours_poly, i, color, 1, 8,
-                     vector<Vec4i>(), 0, Point() );
-        circle(drawing, center[i], (int)radius[i], color, 2, 8, 0 );
-      }
-    } else {
-      // DRAW RECTANGLES
-      for( int i = 0; i< nShape; i++ ) {
-        Scalar color = Scalar(rng.uniform(0, 255),
-                              rng.uniform(0,255),
-                              rng.uniform(0,255));
-        drawContours(dr, contours_poly, i, color, 1, 8,
-                     vector<Vec4i>(), 0, Point());
-        rectangle(drawing, boundRect[i].tl(), boundRect[i].br(),
-                  color, 2, 8, 0);
-      }
-    }
-    
     imshow(DISPLAY, drawing);
-    
+
     waitKey(100);
+  }
+}
+
+void Main::highlightContours(cv::InputOutputArray img, vector<vector<Point>> contours) {
+  int ctrlMinArea = controls[CTRL_MIN_AREA]->getValue();
+  int nShape = 0; // number of shapes (rectangles or circles) to display
+  bool drawCircles = false; // true:circles, false:rectangles
+  /// Approximate contours to polygons + get bounding rects and circles
+  vector<vector<Point> > contours_poly( contours.size() );
+  vector<Rect> boundRect( contours.size() );
+  vector<Point2f>center( contours.size() );
+  vector<float>radius( contours.size() );
+  Mat dr = Mat::zeros(img.size(), CV_8UC3);
+
+  // foreach contour, get the bounding rectangle and the area
+  // if the area is above some certain value
+  for( int i = 0; i < contours.size(); i++ ) {
+    approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+    Rect rect = boundingRect( Mat(contours_poly[i]) );
+    float area  = rect.area();
+
+    if (area > ctrlMinArea) {
+
+      // 1) Circles
+      minEnclosingCircle((Mat)contours_poly[i], center[nShape],
+                         radius[nShape]);
+
+      // 2) Rectangles
+      boundRect[nShape] = rect;
+
+      nShape++;
+    }
+  }
+  if (drawCircles) {
+    for( int i = 0; i< nShape; i++ ) {
+      Scalar color = Scalar(
+                            rng.uniform(0, 255),
+                            rng.uniform(0,255),
+                            rng.uniform(0,255) );
+      drawContours(dr, contours_poly, i, color, 1, 8,
+                   vector<Vec4i>(), 0, Point() );
+      circle(img, center[i], (int)radius[i], color, 2, 8, 0 );
+    }
+  } else {
+    // DRAW RECTANGLES
+    for( int i = 0; i< nShape; i++ ) {
+      Scalar color = Scalar(rng.uniform(0, 255),
+                            rng.uniform(0,255),
+                            rng.uniform(0,255));
+      drawContours(dr, contours_poly, i, color, 1, 8,
+                   vector<Vec4i>(), 0, Point());
+      rectangle(img, boundRect[i].tl(), boundRect[i].br(),
+                color, 2, 8, 0);
+    }
   }
 }
 
