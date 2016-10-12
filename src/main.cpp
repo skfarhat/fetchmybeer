@@ -73,9 +73,6 @@ void Main::start() {
     vc >> frame;
     resize(frame, temp, Size_<int>(frame.cols/2, frame.rows/2));
 
-    Mat drawing;
-    temp.copyTo(drawing);
-
     // get parameters from controls
     int blockSize   = controls[CTRL_BLOCKSIZE]->getValue();
     int C           = controls[CTRL_C]->getValue();
@@ -125,16 +122,19 @@ void Main::start() {
                                             rng.uniform(0,255),
                                             rng.uniform(0,255)));
 
-    highlightContours(drawing, contours); 
+    Mat drawing;
+    temp.copyTo(drawing);
+    highlightContours(drawing, contours);
     imshow("debug", temp);
 
-    imshow(DISPLAY, drawing);
+//    imshow(DISPLAY, drawing);
 
     waitKey(100);
   }
 }
 
-void Main::highlightContours(cv::InputOutputArray img, vector<vector<Point>> contours) {
+void Main::highlightContours(cv::InputOutputArray img,
+                             vector<vector<Point>> contours) {
   int ctrlMinArea = controls[CTRL_MIN_AREA]->getValue();
   int nShape = 0; // number of shapes (rectangles or circles) to display
   bool drawCircles = false; // true:circles, false:rectangles

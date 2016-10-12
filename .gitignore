@@ -18,8 +18,9 @@ trash
 archive/
 backup/
 build/
-xcode/
+xcode*/
 trash/
+res/
 
 
 # don't ignore
